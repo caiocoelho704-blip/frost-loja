@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Frost Acessórios</title>
+  <meta name="description" content="Frost Acessórios — tecnologia ao seu alcance.">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="#" aria-label="Frost Acessórios">
+        <img src="assets/logo-frost.png" alt="Frost Acessórios">
+      </a>
+
+      <div class="delivery">
+        <span class="icon">⌖</span>
+        <div><small>Enviar para</small><strong>Selecione o endereço</strong></div>
+      </div>
+
+      <form class="search" id="searchForm">
+        <select id="categoryFilter" aria-label="Categoria">
+          <option value="all">Todas as categorias</option>
+          <option value="celulares">Celulares</option>
+          <option value="capinhas">Capinhas</option>
+          <option value="fones">Fones</option>
+          <option value="carregadores">Carregadores</option>
+          <option value="cabos">Cabos</option>
+          <option value="smartwatches">Smartwatches</option>
+          <option value="peliculas">Películas</option>
+          <option value="suportes">Suportes</option>
+        </select>
+        <input id="searchInput" type="search" placeholder="Pesquisar produtos..." autocomplete="off">
+        <button aria-label="Pesquisar">⌕</button>
+      </form>
+
+      <div class="account">
+        <small>Olá, faça seu login</small>
+        <strong>Contas e Listas⌄</strong>
+      </div>
+
+      <div class="orders">
+        <small>Devoluções</small>
+        <strong>e Pedidos</strong>
+      </div>
+
+      <button class="cart-head" id="cartButton" aria-label="Abrir carrinho">
+        <span class="cart-icon">🛒</span>
+        <span>Carrinho</span>
+        <b id="cartCount">0</b>
+      </button>
+    </div>
+  </header>
+
+  <nav class="category-nav">
+    <div class="category-nav-inner">
+      <button class="all-categories" data-category="all">☰ &nbsp;Todas as categorias</button>
+      <button data-category="celulares">Celulares</button>
+      <button data-category="capinhas">Capinhas</button>
+      <button data-category="fones">Fones</button>
+      <button data-category="carregadores">Carregadores</button>
+      <button data-category="cabos">Cabos</button>
+      <button data-category="smartwatches">Smartwatches</button>
+      <button data-category="peliculas">Películas</button>
+      <button data-category="suportes">Suportes</button>
+      <button class="offers" data-category="offers">Ofertas do Dia</button>
+    </div>
+  </nav>
+
+  <main>
+    <section class="hero">
+      <button class="hero-arrow left" aria-label="Banner anterior">‹</button>
+      <div class="hero-copy">
+        <p class="eyebrow">TECNOLOGIA</p>
+        <h1>AO SEU ALCANCE</h1>
+        <p>Os melhores acessórios com<br>qualidade e preço baixo!</p>
+        <button class="primary" id="heroShop">COMPRAR AGORA</button>
+      </div>
+      <div class="hero-products" aria-hidden="true">
+        <div class="phone">▣</div>
+        <div class="buds">◉ ◉</div>
+        <div class="watch">◷</div>
+        <div class="charger">▥</div>
+      </div>
+      <div class="hero-brand">FROST<small>ACESSÓRIOS</small></div>
+      <button class="hero-arrow right" aria-label="Próximo banner">›</button>
+      <div class="dots"><i class="active"></i><i></i><i></i><i></i></div>
+    </section>
+
+    <section class="benefits">
+      <div><span>🚚</span><div><strong>Frete rápido</strong><small>Para todo o Brasil</small></div></div>
+      <div><span>🛡️</span><div><strong>Compra segura</strong><small>Seus dados protegidos</small></div></div>
+      <div><span>▣</span><div><strong>Parcele em até 12x</strong><small>Nos cartões de crédito</small></div></div>
+      <div><span>◉</span><div><strong>Suporte dedicado</strong><small>Atendimento especializado</small></div></div>
+      <div><span>🏅</span><div><strong>Garantia de 90 dias</strong><small>Em todos os produtos</small></div></div>
+    </section>
+
+    <section class="section categories-section">
+      <div class="section-title"><h2>Compre por categoria</h2><button class="link-btn" data-category="all">Ver todas</button></div>
+      <div class="categories">
+        <button class="category-card" data-category="celulares"><div class="circle">📱</div><b>Celulares</b></button>
+        <button class="category-card" data-category="capinhas"><div class="circle">▣</div><b>Capinhas</b></button>
+        <button class="category-card" data-category="fones"><div class="circle">🎧</div><b>Fones</b></button>
+        <button class="category-card" data-category="carregadores"><div class="circle">🔌</div><b>Carregadores</b></button>
+        <button class="category-card" data-category="cabos"><div class="circle">〰</div><b>Cabos</b></button>
+        <button class="category-card" data-category="smartwatches"><div class="circle">⌚</div><b>Smartwatches</b></button>
+        <button class="category-card" data-category="peliculas"><div class="circle">▤</div><b>Películas</b></button>
+        <button class="category-card" data-category="suportes"><div class="circle">▰</div><b>Suportes</b></button>
+      </div>
+    </section>
+
+    <section class="section offers-section" id="productsSection">
+      <div class="section-title">
+        <h2>Oferta do dia</h2>
+        <button class="link-btn" id="allOffers">Ver todas as ofertas</button>
+      </div>
+      <div class="product-grid" id="productGrid"></div>
+    </section>
+
+    <section class="trust-strip">
+      <div><span>📦</span><strong>Milhares de produtos</strong><small>Com os melhores preços</small></div>
+      <div><span>🚚</span><strong>Envio para todo o Brasil</strong><small>Com rastreamento</small></div>
+      <div><span>▣</span><strong>Parcelamento facilitado</strong><small>Em até 12x sem juros</small></div>
+      <div><span>🔒</span><strong>Pague com segurança</strong><small>Seus dados sempre protegidos</small></div>
+      <div><span>↻</span><strong>Troca e devolução</strong><small>Fácil e sem burocracia</small></div>
+    </section>
+  </main>
+
+  <aside class="cart-panel" id="cartPanel" aria-hidden="true">
+    <div class="cart-header"><h2>Seu carrinho</h2><button id="closeCart">×</button></div>
+    <div id="cartItems" class="cart-items"></div>
+    <div class="cart-footer">
+      <div><span>Total</span><strong id="cartTotal">R$ 0,00</strong></div>
+      <button class="primary checkout" id="checkoutButton">FINALIZAR PEDIDO</button>
+    </div>
+  </aside>
+  <div class="overlay" id="overlay"></div>
+
+  <footer>
+    <strong>Frost Acessórios</strong>
+    <span>© 2026 — Tecnologia ao seu alcance.</span>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
