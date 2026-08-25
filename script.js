@@ -1,13 +1,45 @@
-const products = [
-  {id:1,name:"iPhone 14 128GB Meia-noite",category:"celulares",price:4299,icon:"📱",reviews:"1.250"},
-  {id:2,name:"Fone Bluetooth AirPods Pro 2",category:"fones",price:1299.90,icon:"🎧",reviews:"856"},
-  {id:3,name:"Carregador Turbo 20W USB-C",category:"carregadores",price:89.90,icon:"🔌",reviews:"623"},
-  {id:4,name:"Smartwatch X10 Tela AMOLED",category:"smartwatches",price:249.90,icon:"⌚",reviews:"432"},
-  {id:5,name:"Capa Premium Anti-impacto",category:"capinhas",price:49.90,icon:"▣",reviews:"318"},
-  {id:6,name:"Cabo USB-C Turbo 1m",category:"cabos",price:29.90,icon:"〰",reviews:"512"},
-  {id:7,name:"Película 3D Full Cover",category:"peliculas",price:24.90,icon:"▤",reviews:"277"},
-  {id:8,name:"Suporte Veicular Magnético",category:"suportes",price:39.90,icon:"▰",reviews:"198"}
-];
+let products = [];
+
+const SUPABASE_URL = "https://vcfgiimsyurlqfnftlkm.supabase.co";
+const SUPABASE_KEY = "sb_publishable_iIuTPrdDe1g2aMpuoE5IsA_DN2bYAoH";
+
+async function loadProducts() {
+  try {
+    const response = await fetch(
+      `${SUPABASE_URL}/rest/v1/produtos?select=*`,
+      {
+        headers: {
+          apikey: SUPABASE_KEY,
+          Authorization: `Bearer ${SUPABASE_KEY}`
+        }
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Erro Supabase: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    products = data.map(p => ({
+      id: p.id,
+      name: p.nome,
+      category: p.tipo,
+      price: Number(p.preço),
+      icon: p.imagem
+        ? `<img src="${p.imagem}" alt="${p.nome}" style="width:100%;height:100%;object-fit:contain;">`
+        : "📦",
+      reviews: "0"
+    }));
+
+    renderProducts(products);
+
+  } catch (error) {
+    console.error("Erro ao carregar produtos:", error);
+  }
+}
+
+loadProducts();
 
 let cart = JSON.parse(localStorage.getItem("frost-cart") || "[]");
 let currentFilter = "all";
