@@ -25,7 +25,7 @@ async function loadProducts() {
       id: p.id,
       name: p.nome,
       category: p.tipo,
-      price: Number(p.preço),
+      price: Number(String(p.preço ?? p.preco ?? p.price).replace(",", ".")),
       icon: p.imagem
         ? `<img src="${p.imagem}" alt="${p.nome}" style="width:100%;height:100%;object-fit:contain;">`
         : "📦",
