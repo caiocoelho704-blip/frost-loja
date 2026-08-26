@@ -129,7 +129,7 @@ document.getElementById("checkoutButton").onclick=()=>{
   alert("A próxima etapa será conectar este botão ao sistema real de pedidos.");
 };
 // ===============================
-// CARROSSEL DE BANNERS FROST
+// CARROSSEL FROST
 // ===============================
 
 const banners = [
@@ -156,39 +156,26 @@ const banners = [
 ];
 
 let currentBanner = 0;
-let bannerTimer;
+let bannerTimer = null;
 
 const hero = document.querySelector(".hero");
-const heroEyebrow = document.querySelector(".hero-copy .eyebrow");
-const heroTitle = document.querySelector(".hero-copy h1");
-const heroText = document.querySelector(".hero-copy > p:not(.eyebrow)");
-const heroLeft = document.querySelector(".hero-arrow.left");
-const heroRight = document.querySelector(".hero-arrow.right");
+const eyebrow = document.querySelector(".hero-copy .eyebrow");
+const title = document.querySelector(".hero-copy h1");
+const text = document.querySelector(".hero-copy > p:not(.eyebrow)");
+const leftButton = document.querySelector(".hero-arrow.left");
+const rightButton = document.querySelector(".hero-arrow.right");
 const dots = document.querySelectorAll(".dots i");
 
-// ===============================
-// MOSTRAR BANNER
-// ===============================
+function showBanner(index) {
 
-function showBanner(index, direction = "next") {
-
-  currentBanner = (index + banners.length) % banners.length;
+  currentBanner =
+    (index + banners.length) % banners.length;
 
   const banner = banners[currentBanner];
 
-  hero.classList.remove("banner-next", "banner-prev");
-
-  void hero.offsetWidth;
-
-  hero.classList.add(
-    direction === "prev"
-      ? "banner-prev"
-      : "banner-next"
-  );
-
-  heroEyebrow.textContent = banner.eyebrow;
-  heroTitle.textContent = banner.title;
-  heroText.innerHTML = banner.text;
+  eyebrow.textContent = banner.eyebrow;
+  title.textContent = banner.title;
+  text.innerHTML = banner.text;
 
   dots.forEach((dot, i) => {
     dot.classList.toggle(
@@ -198,44 +185,38 @@ function showBanner(index, direction = "next") {
   });
 }
 
-// ===============================
-// PRÓXIMO / ANTERIOR
-// ===============================
-
 function nextBanner() {
-  showBanner(currentBanner + 1, "next");
-  restartBannerTimer();
+  showBanner(currentBanner + 1);
+  restartTimer();
 }
 
 function previousBanner() {
-  showBanner(currentBanner - 1, "prev");
-  restartBannerTimer();
+  showBanner(currentBanner - 1);
+  restartTimer();
 }
 
-// ===============================
-// TEMPORIZADOR
-// ===============================
-
-function restartBannerTimer() {
+function restartTimer() {
 
   clearInterval(bannerTimer);
 
   bannerTimer = setInterval(() => {
-    showBanner(currentBanner + 1, "next");
+    showBanner(currentBanner + 1);
   }, 5000);
 }
+
 
 // ===============================
 // SETAS
 // ===============================
 
-if (heroLeft) {
-  heroLeft.addEventListener("click", previousBanner);
+if (leftButton) {
+  leftButton.addEventListener("click", previousBanner);
 }
 
-if (heroRight) {
-  heroRight.addEventListener("click", nextBanner);
+if (rightButton) {
+  rightButton.addEventListener("click", nextBanner);
 }
+
 
 // ===============================
 // BOLINHAS
@@ -245,98 +226,88 @@ dots.forEach((dot, index) => {
 
   dot.addEventListener("click", () => {
 
-    const direction =
-      index > currentBanner
-        ? "next"
-        : "prev";
+    showBanner(index);
+    restartTimer();
 
-    showBanner(index, direction);
-
-    restartBannerTimer();
   });
 
 });
 
+
 // ===============================
-// DESLIZAR COM O MOUSE
+// ARRASTAR COM MOUSE
 // ===============================
 
-let mouseStartX = 0;
-let mouseEndX = 0;
-let mouseDragging = false;
+let startX = 0;
+let isDragging = false;
 
-hero.addEventListener("mousedown", (e) => {
+hero.addEventListener("mousedown", (event) => {
 
-  mouseStartX = e.clientX;
-  mouseDragging = true;
+  startX = event.clientX;
+  isDragging = true;
 
 });
 
-hero.addEventListener("mouseup", (e) => {
+hero.addEventListener("mouseup", (event) => {
 
-  if (!mouseDragging) return;
+  if (!isDragging) return;
 
-  mouseEndX = e.clientX;
-  mouseDragging = false;
+  const endX = event.clientX;
+  const difference = startX - endX;
 
-  const difference =
-    mouseStartX - mouseEndX;
+  isDragging = false;
 
-  if (Math.abs(difference) > 50) {
+  if (Math.abs(difference) < 50) return;
 
-    if (difference > 0) {
-      nextBanner();
-    } else {
-      previousBanner();
-    }
-
+  if (difference > 0) {
+    nextBanner();
+  } else {
+    previousBanner();
   }
 
 });
 
 hero.addEventListener("mouseleave", () => {
-  mouseDragging = false;
+  isDragging = false;
 });
+
 
 // ===============================
 // DESLIZAR NO CELULAR
 // ===============================
 
 let touchStartX = 0;
-let touchEndX = 0;
 
-hero.addEventListener("touchstart", (e) => {
+hero.addEventListener("touchstart", (event) => {
 
   touchStartX =
-    e.touches[0].clientX;
+    event.touches[0].clientX;
 
-});
+}, { passive: true });
 
-hero.addEventListener("touchend", (e) => {
 
-  touchEndX =
-    e.changedTouches[0].clientX;
+hero.addEventListener("touchend", (event) => {
+
+  const touchEndX =
+    event.changedTouches[0].clientX;
 
   const difference =
     touchStartX - touchEndX;
 
-  if (Math.abs(difference) > 50) {
+  if (Math.abs(difference) < 50) return;
 
-    if (difference > 0) {
-      nextBanner();
-    } else {
-      previousBanner();
-    }
-
+  if (difference > 0) {
+    nextBanner();
+  } else {
+    previousBanner();
   }
 
-});
+}, { passive: true });
+
 
 // ===============================
 // INICIAR
 // ===============================
 
 showBanner(0);
-restartBannerTimer();
-renderProducts();
-updateCart();
+restartTimer();
