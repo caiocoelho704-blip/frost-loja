@@ -166,32 +166,41 @@ const heroLeft = document.querySelector(".hero-arrow.left");
 const heroRight = document.querySelector(".hero-arrow.right");
 const dots = document.querySelectorAll(".dots i");
 
+// ===============================
+// MOSTRAR BANNER
+// ===============================
+
 function showBanner(index, direction = "next") {
 
   currentBanner = (index + banners.length) % banners.length;
 
   const banner = banners[currentBanner];
 
-  // animação
   hero.classList.remove("banner-next", "banner-prev");
+
   void hero.offsetWidth;
 
-  if (direction === "prev") {
-    hero.classList.add("banner-prev");
-  } else {
-    hero.classList.add("banner-next");
-  }
+  hero.classList.add(
+    direction === "prev"
+      ? "banner-prev"
+      : "banner-next"
+  );
 
-  // troca conteúdo
   heroEyebrow.textContent = banner.eyebrow;
   heroTitle.textContent = banner.title;
   heroText.innerHTML = banner.text;
 
-  // atualiza bolinhas
   dots.forEach((dot, i) => {
-    dot.classList.toggle("active", i === currentBanner);
+    dot.classList.toggle(
+      "active",
+      i === currentBanner
+    );
   });
 }
+
+// ===============================
+// PRÓXIMO / ANTERIOR
+// ===============================
 
 function nextBanner() {
   showBanner(currentBanner + 1, "next");
@@ -203,7 +212,12 @@ function previousBanner() {
   restartBannerTimer();
 }
 
+// ===============================
+// TEMPORIZADOR
+// ===============================
+
 function restartBannerTimer() {
+
   clearInterval(bannerTimer);
 
   bannerTimer = setInterval(() => {
@@ -211,7 +225,10 @@ function restartBannerTimer() {
   }, 5000);
 }
 
-// Setas
+// ===============================
+// SETAS
+// ===============================
+
 if (heroLeft) {
   heroLeft.addEventListener("click", previousBanner);
 }
@@ -220,16 +237,105 @@ if (heroRight) {
   heroRight.addEventListener("click", nextBanner);
 }
 
-// Bolinhas
+// ===============================
+// BOLINHAS
+// ===============================
+
 dots.forEach((dot, index) => {
+
   dot.addEventListener("click", () => {
-    const direction = index > currentBanner ? "next" : "prev";
+
+    const direction =
+      index > currentBanner
+        ? "next"
+        : "prev";
+
     showBanner(index, direction);
+
     restartBannerTimer();
   });
+
 });
 
-// Inicia o carrossel
+// ===============================
+// DESLIZAR COM O MOUSE
+// ===============================
+
+let mouseStartX = 0;
+let mouseEndX = 0;
+let mouseDragging = false;
+
+hero.addEventListener("mousedown", (e) => {
+
+  mouseStartX = e.clientX;
+  mouseDragging = true;
+
+});
+
+hero.addEventListener("mouseup", (e) => {
+
+  if (!mouseDragging) return;
+
+  mouseEndX = e.clientX;
+  mouseDragging = false;
+
+  const difference =
+    mouseStartX - mouseEndX;
+
+  if (Math.abs(difference) > 50) {
+
+    if (difference > 0) {
+      nextBanner();
+    } else {
+      previousBanner();
+    }
+
+  }
+
+});
+
+hero.addEventListener("mouseleave", () => {
+  mouseDragging = false;
+});
+
+// ===============================
+// DESLIZAR NO CELULAR
+// ===============================
+
+let touchStartX = 0;
+let touchEndX = 0;
+
+hero.addEventListener("touchstart", (e) => {
+
+  touchStartX =
+    e.touches[0].clientX;
+
+});
+
+hero.addEventListener("touchend", (e) => {
+
+  touchEndX =
+    e.changedTouches[0].clientX;
+
+  const difference =
+    touchStartX - touchEndX;
+
+  if (Math.abs(difference) > 50) {
+
+    if (difference > 0) {
+      nextBanner();
+    } else {
+      previousBanner();
+    }
+
+  }
+
+});
+
+// ===============================
+// INICIAR
+// ===============================
+
 showBanner(0);
 restartBannerTimer();
 renderProducts();
