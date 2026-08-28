@@ -1,10 +1,55 @@
-let products = [];
+// ======================================================
+// FROST ACESSÓRIOS - SCRIPT PRINCIPAL
+// ======================================================
+
+// ======================================================
+// CONFIGURAÇÕES
+// ======================================================
 
 const SUPABASE_URL = "https://vcfgiimsyurlqfnftlkm.supabase.co";
 const SUPABASE_KEY = "sb_publishable_iIuTPrdDe1g2aMpuoE5IsA_DN2bYAoH";
 
+// WhatsApp da Frost
+const WHATSAPP_NUMBER = "5585998238173";
+
+// ======================================================
+// PRODUTOS
+// ======================================================
+
+let products = [];
+let currentFilter = "all";
+
+// ======================================================
+// CARRINHO
+// ======================================================
+
+let cart = JSON.parse(
+  localStorage.getItem("frost-cart") || "[]"
+);
+
+// ======================================================
+// FORMATAÇÃO DE PREÇO
+// ======================================================
+
+const money = (value) => {
+
+  const number = Number(value) || 0;
+
+  return number.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL"
+  });
+
+};
+
+// ======================================================
+// CARREGAR PRODUTOS DO SUPABASE
+// ======================================================
+
 async function loadProducts() {
+
   try {
+
     const response = await fetch(
       `${SUPABASE_URL}/rest/v1/produtos?select=*`,
       {
@@ -16,298 +61,1319 @@ async function loadProducts() {
     );
 
     if (!response.ok) {
-      throw new Error(`Erro Supabase: ${response.status}`);
+
+      throw new Error(
+        `Erro Supabase: ${response.status}`
+      );
+
     }
 
     const data = await response.json();
 
-    products = data.map(p => ({
-      id: p.id,
-      name: p.nome,
-      category: p.tipo,
-      price: Number(String(p.preço ?? p.preco ?? p.price).replace(",", ".")),
-      icon: p.imagem
-        ? `<img src="${p.imagem}" alt="${p.nome}" style="width:100%;height:100%;object-fit:contain;">`
-        : "📦",
-      reviews: "0"
-    }));
+    products = data.map((p) => {
+
+      const rawPrice =
+        p.preço ??
+        p.preco ??
+        p.price ??
+        0;
+
+      const price = Number(
+        String(rawPrice)
+          .replace("R$", "")
+          .replace(/\s/g, "")
+          .replace(",", ".")
+      ) || 0;
+
+      return {
+
+        id: p.id,
+
+        name: p.nome || "Produto",
+
+        category: p.tipo || "all",
+
+        price: price,
+
+        image: p.imagem || "",
+
+        icon: p.imagem
+          ? `
+            <img
+              src="${p.imagem}"
+              alt="${p.nome || "Produto"}"
+              loading="lazy"
+            >
+          `
+          : "📦",
+
+        reviews: "0"
+
+      };
+
+    });
+
+    console.log(
+      "Produtos carregados:",
+      products
+    );
 
     renderProducts(products);
 
   } catch (error) {
-    console.error("Erro ao carregar produtos:", error);
+
+    console.error(
+      "Erro ao carregar produtos:",
+      error
+    );
+
+    const grid =
+      document.getElementById("productGrid");
+
+    if (grid) {
+
+      grid.innerHTML = `
+        <div style="
+          grid-column:1/-1;
+          padding:30px;
+          text-align:center;
+        ">
+          <strong>Não foi possível carregar os produtos.</strong>
+          <br>
+          <small>
+            Tente atualizar a página.
+          </small>
+        </div>
+      `;
+
+    }
+
   }
+
 }
 
-loadProducts();
+// ======================================================
+// RENDERIZAR PRODUTOS
+// ======================================================
 
-let cart = JSON.parse(localStorage.getItem("frost-cart") || "[]");
-let currentFilter = "all";
+function renderProducts(list = products) {
 
-const money = v => v.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+  const grid =
+    document.getElementById("productGrid");
 
-function renderProducts(list=products){
-  const grid=document.getElementById("productGrid");
-  grid.innerHTML=list.map(p=>`
-    <article class="product-card">
-      <div class="product-image">${p.icon}</div>
-      <div class="product-info">
-        <h3>${p.name}</h3>
-        <div class="stars">★★★★★ <span class="reviews">(${p.reviews})</span></div>
-        <div class="price">${money(p.price)}</div>
-        <div class="installment">ou 12x de ${money(p.price/12)}</div>
-        <button class="add-cart" data-add="${p.id}">Adicionar ao carrinho</button>
+  if (!grid) return;
+
+  if (!list.length) {
+
+    grid.innerHTML = `
+      <div style="
+        grid-column:1/-1;
+        padding:40px;
+        text-align:center;
+      ">
+        <h3>Nenhum produto encontrado</h3>
+        <p>Experimente outra categoria ou pesquisa.</p>
       </div>
-    </article>`).join("");
-  grid.querySelectorAll("[data-add]").forEach(b=>b.addEventListener("click",()=>addToCart(+b.dataset.add)));
+    `;
+
+    return;
+
+  }
+
+  grid.innerHTML = list.map((p) => `
+
+    <article class="product-card">
+
+      <div class="product-image">
+        ${p.icon}
+      </div>
+
+      <div class="product-info">
+
+        <h3>
+          ${escapeHTML(p.name)}
+        </h3>
+
+        <div class="stars">
+          ★★★★★
+          <span class="reviews">
+            (${p.reviews})
+          </span>
+        </div>
+
+        <div class="price">
+          ${money(p.price)}
+        </div>
+
+        <div class="installment">
+          ou 12x de ${money(p.price / 12)}
+        </div>
+
+        <button
+          class="add-cart"
+          data-add="${p.id}"
+        >
+          Adicionar ao carrinho
+        </button>
+
+      </div>
+
+    </article>
+
+  `).join("");
+
+  grid
+    .querySelectorAll("[data-add]")
+    .forEach((button) => {
+
+      button.addEventListener(
+        "click",
+        () => {
+
+          const id =
+            Number(button.dataset.add);
+
+          addToCart(id);
+
+        }
+      );
+
+    });
+
 }
 
-function saveCart(){localStorage.setItem("frost-cart",JSON.stringify(cart));}
+// ======================================================
+// PROTEÇÃO DE TEXTO
+// ======================================================
 
-function addToCart(id){
-  const p=products.find(x=>x.id===id);
-  const found=cart.find(x=>x.id===id);
-  if(found) found.qty++;
-  else cart.push({...p,qty:1});
-  saveCart(); updateCart();
+function escapeHTML(text) {
+
+  return String(text)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+
+}
+
+// ======================================================
+// SALVAR CARRINHO
+// ======================================================
+
+function saveCart() {
+
+  localStorage.setItem(
+    "frost-cart",
+    JSON.stringify(cart)
+  );
+
+}
+
+// ======================================================
+// ADICIONAR AO CARRINHO
+// ======================================================
+
+function addToCart(id) {
+
+  const product =
+    products.find(
+      (p) => Number(p.id) === Number(id)
+    );
+
+  if (!product) {
+
+    console.error(
+      "Produto não encontrado:",
+      id
+    );
+
+    return;
+
+  }
+
+  const existing =
+    cart.find(
+      (item) =>
+        Number(item.id) === Number(id)
+    );
+
+  if (existing) {
+
+    existing.qty += 1;
+
+  } else {
+
+    cart.push({
+
+      id: product.id,
+
+      name: product.name,
+
+      price: product.price,
+
+      image: product.image,
+
+      icon: product.icon,
+
+      qty: 1
+
+    });
+
+  }
+
+  saveCart();
+
+  updateCart();
+
   openCart();
+
 }
 
-function removeFromCart(id){
-  cart=cart.filter(x=>x.id!==id);
-  saveCart(); updateCart();
+// ======================================================
+// AUMENTAR QUANTIDADE
+// ======================================================
+
+function increaseQuantity(id) {
+
+  const item =
+    cart.find(
+      (p) => Number(p.id) === Number(id)
+    );
+
+  if (!item) return;
+
+  item.qty += 1;
+
+  saveCart();
+
+  updateCart();
+
 }
 
-function updateCart(){
-  const count=cart.reduce((s,x)=>s+x.qty,0);
-  const total=cart.reduce((s,x)=>s+x.price*x.qty,0);
-  document.getElementById("cartCount").textContent=count;
-  document.getElementById("cartTotal").textContent=money(total);
-  const box=document.getElementById("cartItems");
-  box.innerHTML=cart.length?cart.map(x=>`
-    <div class="cart-item">
-      <div class="cart-item-img">${x.icon}</div>
-      <div><strong>${x.name}</strong><small>Qtd: ${x.qty} · ${money(x.price*x.qty)}</small></div>
-      <button class="remove" data-remove="${x.id}">Excluir</button>
-    </div>`).join(""):`<p>Seu carrinho está vazio.</p>`;
-  box.querySelectorAll("[data-remove]").forEach(b=>b.addEventListener("click",()=>removeFromCart(+b.dataset.remove)));
+// ======================================================
+// DIMINUIR QUANTIDADE
+// ======================================================
+
+function decreaseQuantity(id) {
+
+  const item =
+    cart.find(
+      (p) => Number(p.id) === Number(id)
+    );
+
+  if (!item) return;
+
+  if (item.qty > 1) {
+
+    item.qty -= 1;
+
+  } else {
+
+    cart =
+      cart.filter(
+        (p) =>
+          Number(p.id) !== Number(id)
+      );
+
+  }
+
+  saveCart();
+
+  updateCart();
+
 }
 
-function openCart(){
-  document.getElementById("cartPanel").classList.add("open");
-  document.getElementById("overlay").classList.add("show");
+// ======================================================
+// REMOVER PRODUTO
+// ======================================================
+
+function removeFromCart(id) {
+
+  cart =
+    cart.filter(
+      (item) =>
+        Number(item.id) !== Number(id)
+    );
+
+  saveCart();
+
+  updateCart();
+
 }
-function closeCart(){
-  document.getElementById("cartPanel").classList.remove("open");
-  document.getElementById("overlay").classList.remove("show");
+
+// ======================================================
+// ATUALIZAR CARRINHO
+// ======================================================
+
+function updateCart() {
+
+  const count =
+    cart.reduce(
+      (total, item) =>
+        total + item.qty,
+      0
+    );
+
+  const total =
+    cart.reduce(
+      (sum, item) =>
+        sum + item.price * item.qty,
+      0
+    );
+
+  const cartCount =
+    document.getElementById("cartCount");
+
+  const cartTotal =
+    document.getElementById("cartTotal");
+
+  const cartItems =
+    document.getElementById("cartItems");
+
+  if (cartCount) {
+
+    cartCount.textContent =
+      count;
+
+  }
+
+  if (cartTotal) {
+
+    cartTotal.textContent =
+      money(total);
+
+  }
+
+  if (!cartItems) return;
+
+  if (!cart.length) {
+
+    cartItems.innerHTML = `
+      <div style="
+        text-align:center;
+        padding:30px 10px;
+      ">
+        <div style="font-size:45px;">
+          🛒
+        </div>
+
+        <strong>
+          Seu carrinho está vazio
+        </strong>
+
+        <p>
+          Adicione produtos para continuar.
+        </p>
+      </div>
+    `;
+
+    return;
+
+  }
+
+  cartItems.innerHTML =
+    cart.map((item) => `
+
+      <div class="cart-item">
+
+        <div class="cart-item-img">
+          ${item.icon || "📦"}
+        </div>
+
+        <div>
+
+          <strong>
+            ${escapeHTML(item.name)}
+          </strong>
+
+          <small>
+            ${money(item.price)}
+          </small>
+
+          <div style="
+            display:flex;
+            align-items:center;
+            gap:8px;
+            margin-top:8px;
+          ">
+
+            <button
+              type="button"
+              class="qty-minus"
+              data-minus="${item.id}"
+              style="
+                width:28px;
+                height:28px;
+                border:1px solid #ddd;
+                background:#fff;
+                cursor:pointer;
+                border-radius:4px;
+              "
+            >
+              −
+            </button>
+
+            <strong>
+              ${item.qty}
+            </strong>
+
+            <button
+              type="button"
+              class="qty-plus"
+              data-plus="${item.id}"
+              style="
+                width:28px;
+                height:28px;
+                border:1px solid #ddd;
+                background:#fff;
+                cursor:pointer;
+                border-radius:4px;
+              "
+            >
+              +
+            </button>
+
+          </div>
+
+        </div>
+
+        <button
+          class="remove"
+          data-remove="${item.id}"
+        >
+          Excluir
+        </button>
+
+      </div>
+
+    `).join("");
+
+  cartItems
+    .querySelectorAll("[data-minus]")
+    .forEach((button) => {
+
+      button.addEventListener(
+        "click",
+        () => {
+
+          decreaseQuantity(
+            Number(button.dataset.minus)
+          );
+
+        }
+      );
+
+    });
+
+  cartItems
+    .querySelectorAll("[data-plus]")
+    .forEach((button) => {
+
+      button.addEventListener(
+        "click",
+        () => {
+
+          increaseQuantity(
+            Number(button.dataset.plus)
+          );
+
+        }
+      );
+
+    });
+
+  cartItems
+    .querySelectorAll("[data-remove]")
+    .forEach((button) => {
+
+      button.addEventListener(
+        "click",
+        () => {
+
+          removeFromCart(
+            Number(button.dataset.remove)
+          );
+
+        }
+      );
+
+    });
+
 }
-function filter(category){
-  currentFilter=category;
-  const list=category==="all"||category==="offers"?products:products.filter(p=>p.category===category);
+
+// ======================================================
+// ABRIR CARRINHO
+// ======================================================
+
+function openCart() {
+
+  const panel =
+    document.getElementById("cartPanel");
+
+  const overlay =
+    document.getElementById("overlay");
+
+  if (panel) {
+
+    panel.classList.add("open");
+
+    panel.setAttribute(
+      "aria-hidden",
+      "false"
+    );
+
+  }
+
+  if (overlay) {
+
+    overlay.classList.add("show");
+
+  }
+
+}
+
+// ======================================================
+// FECHAR CARRINHO
+// ======================================================
+
+function closeCart() {
+
+  const panel =
+    document.getElementById("cartPanel");
+
+  const overlay =
+    document.getElementById("overlay");
+
+  if (panel) {
+
+    panel.classList.remove("open");
+
+    panel.setAttribute(
+      "aria-hidden",
+      "true"
+    );
+
+  }
+
+  if (overlay) {
+
+    overlay.classList.remove("show");
+
+  }
+
+}
+
+// ======================================================
+// FILTRO DE CATEGORIA
+// ======================================================
+
+function filter(category) {
+
+  currentFilter = category;
+
+  let list;
+
+  if (
+    category === "all" ||
+    category === "offers"
+  ) {
+
+    list = products;
+
+  } else {
+
+    list =
+      products.filter(
+        (product) =>
+          String(product.category)
+            .toLowerCase() ===
+          String(category)
+            .toLowerCase()
+      );
+
+  }
+
   renderProducts(list);
-  document.getElementById("productsSection").scrollIntoView({behavior:"smooth"});
+
+  const section =
+    document.getElementById(
+      "productsSection"
+    );
+
+  if (section) {
+
+    section.scrollIntoView({
+      behavior: "smooth"
+    });
+
+  }
+
 }
 
-document.querySelectorAll("[data-category]").forEach(b=>b.addEventListener("click",()=>filter(b.dataset.category)));
-document.getElementById("cartButton").onclick=openCart;
-document.getElementById("closeCart").onclick=closeCart;
-document.getElementById("overlay").onclick=closeCart;
-document.getElementById("heroShop").onclick=()=>filter("all");
-document.getElementById("allOffers").onclick=()=>filter("offers");
+// ======================================================
+// PESQUISA
+// ======================================================
 
-document.getElementById("searchForm").addEventListener("submit",e=>{
-  e.preventDefault();
-  const q=document.getElementById("searchInput").value.toLowerCase().trim();
-  const category=document.getElementById("categoryFilter").value;
-  const list=products.filter(p=>(category==="all"||p.category===category)&&p.name.toLowerCase().includes(q));
+function searchProducts() {
+
+  const input =
+    document.getElementById(
+      "searchInput"
+    );
+
+  const categorySelect =
+    document.getElementById(
+      "categoryFilter"
+    );
+
+  if (!input) return;
+
+  const query =
+    input.value
+      .toLowerCase()
+      .trim();
+
+  const category =
+    categorySelect
+      ? categorySelect.value
+      : "all";
+
+  const list =
+    products.filter((product) => {
+
+      const matchesCategory =
+        category === "all" ||
+        String(product.category)
+          .toLowerCase() ===
+        String(category)
+          .toLowerCase();
+
+      const matchesName =
+        product.name
+          .toLowerCase()
+          .includes(query);
+
+      return (
+        matchesCategory &&
+        matchesName
+      );
+
+    });
+
   renderProducts(list);
-  document.getElementById("productsSection").scrollIntoView({behavior:"smooth"});
-});
 
-document.getElementById("checkoutButton").onclick=()=>{
-  if(!cart.length){alert("Seu carrinho está vazio.");return;}
-  alert("A próxima etapa será conectar este botão ao sistema real de pedidos.");
-};
-// ===============================
+  const section =
+    document.getElementById(
+      "productsSection"
+    );
+
+  if (section) {
+
+    section.scrollIntoView({
+      behavior: "smooth"
+    });
+
+  }
+
+}
+
+// ======================================================
+// CHECKOUT → WHATSAPP
+// ======================================================
+
+function checkoutWhatsApp() {
+
+  if (!cart.length) {
+
+    alert(
+      "Seu carrinho está vazio."
+    );
+
+    return;
+
+  }
+
+  let message =
+    "Olá! 👋 Quero fazer um pedido na Frost Acessórios.%0A%0A";
+
+  message +=
+    "🛒 *MEU PEDIDO*%0A";
+
+  message +=
+    "━━━━━━━━━━━━━━━━━━%0A";
+
+  cart.forEach((item) => {
+
+    const subtotal =
+      item.price * item.qty;
+
+    message +=
+      `📦 ${item.name}%0A`;
+
+    message +=
+      `Quantidade: ${item.qty}%0A`;
+
+    message +=
+      `Valor: ${money(subtotal)}%0A%0A`;
+
+  });
+
+  const total =
+    cart.reduce(
+      (sum, item) =>
+        sum + item.price * item.qty,
+      0
+    );
+
+  message +=
+    "━━━━━━━━━━━━━━━━━━%0A";
+
+  message +=
+    `💰 *TOTAL: ${money(total)}*%0A%0A`;
+
+  message +=
+    "Gostaria de receber as opções de pagamento e o link seguro para finalizar a compra.";
+
+  const whatsappURL =
+    `https://wa.me/${WHATSAPP_NUMBER}?text=${message}`;
+
+  window.open(
+    whatsappURL,
+    "_blank"
+  );
+
+}
+
+// ======================================================
+// EVENTOS DA PÁGINA
+// ======================================================
+
+document
+  .querySelectorAll("[data-category]")
+  .forEach((button) => {
+
+    button.addEventListener(
+      "click",
+      () => {
+
+        filter(
+          button.dataset.category
+        );
+
+      }
+    );
+
+  });
+
+
+// ======================================================
+// BOTÃO CARRINHO
+// ======================================================
+
+const cartButton =
+  document.getElementById(
+    "cartButton"
+  );
+
+if (cartButton) {
+
+  cartButton.addEventListener(
+    "click",
+    openCart
+  );
+
+}
+
+
+// ======================================================
+// FECHAR CARRINHO
+// ======================================================
+
+const closeCartButton =
+  document.getElementById(
+    "closeCart"
+  );
+
+if (closeCartButton) {
+
+  closeCartButton.addEventListener(
+    "click",
+    closeCart
+  );
+
+}
+
+
+const overlay =
+  document.getElementById(
+    "overlay"
+  );
+
+if (overlay) {
+
+  overlay.addEventListener(
+    "click",
+    closeCart
+  );
+
+}
+
+
+// ======================================================
+// BOTÃO COMPRAR AGORA
+// ======================================================
+
+const heroShop =
+  document.getElementById(
+    "heroShop"
+  );
+
+if (heroShop) {
+
+  heroShop.addEventListener(
+    "click",
+    () => filter("all")
+  );
+
+}
+
+
+// ======================================================
+// BOTÃO OFERTAS
+// ======================================================
+
+const allOffers =
+  document.getElementById(
+    "allOffers"
+  );
+
+if (allOffers) {
+
+  allOffers.addEventListener(
+    "click",
+    () => filter("offers")
+  );
+
+}
+
+
+// ======================================================
+// PESQUISA
+// ======================================================
+
+const searchForm =
+  document.getElementById(
+    "searchForm"
+  );
+
+if (searchForm) {
+
+  searchForm.addEventListener(
+    "submit",
+    (event) => {
+
+      event.preventDefault();
+
+      searchProducts();
+
+    }
+  );
+
+}
+
+
+// ======================================================
+// FINALIZAR PEDIDO
+// ======================================================
+
+const checkoutButton =
+  document.getElementById(
+    "checkoutButton"
+  );
+
+if (checkoutButton) {
+
+  checkoutButton.textContent =
+    "PEDIR PELO WHATSAPP";
+
+  checkoutButton.addEventListener(
+    "click",
+    checkoutWhatsApp
+  );
+
+}
+
+
+// ======================================================
 // CARROSSEL FROST
-// ===============================
+// ======================================================
 
 const banners = [
+
   {
     eyebrow: "TECNOLOGIA",
     title: "AO SEU ALCANCE",
-    text: "Os melhores acessórios com<br>qualidade e preço baixo!"
+    text:
+      "Os melhores acessórios com<br>qualidade e preço baixo!"
   },
+
   {
     eyebrow: "OFERTAS FROST",
     title: "PREÇOS QUE CABEM NO BOLSO",
-    text: "Produtos selecionados com<br>ótimos preços para você!"
+    text:
+      "Produtos selecionados com<br>ótimos preços para você!"
   },
+
   {
     eyebrow: "NOVIDADES",
     title: "TECNOLOGIA NA SUA MÃO",
-    text: "Confira os novos produtos<br>da Frost Acessórios!"
+    text:
+      "Confira os novos produtos<br>da Frost Acessórios!"
   },
+
   {
     eyebrow: "FROST ACESSÓRIOS",
     title: "COMPRE COM SEGURANÇA",
-    text: "Qualidade, preço justo e<br>envio para todo o Brasil!"
+    text:
+      "Qualidade, preço justo e<br>envio para todo o Brasil!"
   }
+
 ];
 
 let currentBanner = 0;
 let bannerTimer = null;
 
-const hero = document.querySelector(".hero");
-const eyebrow = document.querySelector(".hero-copy .eyebrow");
-const title = document.querySelector(".hero-copy h1");
-const text = document.querySelector(".hero-copy > p:not(.eyebrow)");
-const leftButton = document.querySelector(".hero-arrow.left");
-const rightButton = document.querySelector(".hero-arrow.right");
-const dots = document.querySelectorAll(".dots i");
+const hero =
+  document.querySelector(
+    ".hero"
+  );
+
+const eyebrow =
+  document.querySelector(
+    ".hero-copy .eyebrow"
+  );
+
+const title =
+  document.querySelector(
+    ".hero-copy h1"
+  );
+
+const text =
+  document.querySelector(
+    ".hero-copy > p:not(.eyebrow)"
+  );
+
+const leftButton =
+  document.querySelector(
+    ".hero-arrow.left"
+  );
+
+const rightButton =
+  document.querySelector(
+    ".hero-arrow.right"
+  );
+
+const dots =
+  document.querySelectorAll(
+    ".dots i"
+  );
+
+
+// ======================================================
+// MOSTRAR BANNER
+// ======================================================
 
 function showBanner(index) {
 
+  if (!hero) return;
+
   currentBanner =
-    (index + banners.length) % banners.length;
+    (index + banners.length) %
+    banners.length;
 
-  const banner = banners[currentBanner];
+  const banner =
+    banners[currentBanner];
 
-  eyebrow.textContent = banner.eyebrow;
-  title.textContent = banner.title;
-  text.innerHTML = banner.text;
+  if (eyebrow) {
 
-  dots.forEach((dot, i) => {
-    dot.classList.toggle(
-      "active",
-      i === currentBanner
-    );
-  });
+    eyebrow.textContent =
+      banner.eyebrow;
+
+  }
+
+  if (title) {
+
+    title.textContent =
+      banner.title;
+
+  }
+
+  if (text) {
+
+    text.innerHTML =
+      banner.text;
+
+  }
+
+  dots.forEach(
+    (dot, i) => {
+
+      dot.classList.toggle(
+        "active",
+        i === currentBanner
+      );
+
+    }
+  );
+
 }
+
+
+// ======================================================
+// PRÓXIMO BANNER
+// ======================================================
 
 function nextBanner() {
-  showBanner(currentBanner + 1);
+
+  showBanner(
+    currentBanner + 1
+  );
+
   restartTimer();
+
 }
 
+
+// ======================================================
+// BANNER ANTERIOR
+// ======================================================
+
 function previousBanner() {
-  showBanner(currentBanner - 1);
+
+  showBanner(
+    currentBanner - 1
+  );
+
   restartTimer();
+
 }
+
+
+// ======================================================
+// TIMER
+// ======================================================
 
 function restartTimer() {
 
-  clearInterval(bannerTimer);
+  clearInterval(
+    bannerTimer
+  );
 
-  bannerTimer = setInterval(() => {
-    showBanner(currentBanner + 1);
-  }, 5000);
+  bannerTimer =
+    setInterval(
+      () => {
+
+        showBanner(
+          currentBanner + 1
+        );
+
+      },
+      5000
+    );
+
 }
 
 
-// ===============================
+// ======================================================
 // SETAS
-// ===============================
+// ======================================================
 
 if (leftButton) {
-  leftButton.addEventListener("click", previousBanner);
+
+  leftButton.addEventListener(
+    "click",
+    previousBanner
+  );
+
 }
 
 if (rightButton) {
-  rightButton.addEventListener("click", nextBanner);
+
+  rightButton.addEventListener(
+    "click",
+    nextBanner
+  );
+
 }
 
 
-// ===============================
+// ======================================================
 // BOLINHAS
-// ===============================
+// ======================================================
 
-dots.forEach((dot, index) => {
+dots.forEach(
+  (dot, index) => {
 
-  dot.addEventListener("click", () => {
+    dot.addEventListener(
+      "click",
+      () => {
 
-    showBanner(index);
-    restartTimer();
+        showBanner(index);
 
-  });
+        restartTimer();
 
-});
+      }
+    );
+
+  }
+);
 
 
-// ===============================
+// ======================================================
 // ARRASTAR COM MOUSE
-// ===============================
+// ======================================================
 
-let startX = 0;
+let mouseStartX = 0;
 let isDragging = false;
 
-hero.addEventListener("mousedown", (event) => {
+if (hero) {
 
-  startX = event.clientX;
-  isDragging = true;
+  hero.addEventListener(
+    "mousedown",
+    (event) => {
 
-});
+      mouseStartX =
+        event.clientX;
 
-hero.addEventListener("mouseup", (event) => {
+      isDragging = true;
 
-  if (!isDragging) return;
+    }
+  );
 
-  const endX = event.clientX;
-  const difference = startX - endX;
+  hero.addEventListener(
+    "mouseup",
+    (event) => {
 
-  isDragging = false;
+      if (!isDragging)
+        return;
 
-  if (Math.abs(difference) < 50) return;
+      const mouseEndX =
+        event.clientX;
 
-  if (difference > 0) {
-    nextBanner();
-  } else {
-    previousBanner();
-  }
+      const difference =
+        mouseStartX -
+        mouseEndX;
 
-});
+      isDragging = false;
 
-hero.addEventListener("mouseleave", () => {
-  isDragging = false;
-});
+      if (
+        Math.abs(difference) < 50
+      ) {
+
+        return;
+
+      }
+
+      if (difference > 0) {
+
+        nextBanner();
+
+      } else {
+
+        previousBanner();
+
+      }
+
+    }
+  );
+
+  hero.addEventListener(
+    "mouseleave",
+    () => {
+
+      isDragging = false;
+
+    }
+  );
+
+}
 
 
-// ===============================
+// ======================================================
 // DESLIZAR NO CELULAR
-// ===============================
+// ======================================================
 
 let touchStartX = 0;
 
-hero.addEventListener("touchstart", (event) => {
+if (hero) {
 
-  touchStartX =
-    event.touches[0].clientX;
+  hero.addEventListener(
+    "touchstart",
+    (event) => {
 
-}, { passive: true });
+      touchStartX =
+        event.touches[0].clientX;
+
+    },
+    {
+      passive: true
+    }
+  );
+
+  hero.addEventListener(
+    "touchend",
+    (event) => {
+
+      const touchEndX =
+        event.changedTouches[0].clientX;
+
+      const difference =
+        touchStartX -
+        touchEndX;
+
+      if (
+        Math.abs(difference) < 50
+      ) {
+
+        return;
+
+      }
+
+      if (difference > 0) {
+
+        nextBanner();
+
+      } else {
+
+        previousBanner();
+
+      }
+
+    },
+    {
+      passive: true
+    }
+  );
+
+}
 
 
-hero.addEventListener("touchend", (event) => {
+// ======================================================
+// INICIALIZAÇÃO
+// ======================================================
 
-  const touchEndX =
-    event.changedTouches[0].clientX;
+document.addEventListener(
+  "DOMContentLoaded",
+  () => {
 
-  const difference =
-    touchStartX - touchEndX;
+    updateCart();
 
-  if (Math.abs(difference) < 50) return;
+    loadProducts();
 
-  if (difference > 0) {
-    nextBanner();
-  } else {
-    previousBanner();
+    showBanner(0);
+
+    restartTimer();
+
   }
-
-}, { passive: true });
-
-
-// ===============================
-// INICIAR
-// ===============================
-
-showBanner(0);
-restartTimer();
+);
